@@ -1,0 +1,21 @@
+DATABASE DATA
+
+Database user: postgres
+Database host: localhost
+Database port: 5432
+Database name: analytics
+Database pasword: 0202
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+Custom format dump
+
+Backup olish: pg_dump --serializable-deferrable --no-owner --no-privileges -U <user> -h <host> -p <port> -F c -f backup_name.dump <dbname>
+Backup tiklash: pg_restore -U <user> -h <host> -p <port> -d <dbname> backup_name.dump
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+SQL formatda
+
+Backup olish: pg_dump --serializable-deferrable --no-owner --no-privileges -U <user> -h <host> -p <port> <dbname> > backup_name.sql
+Backup tiklash: psql -U <user> -h <host> -p <port> -d <dbname> -f backup_name.sql
