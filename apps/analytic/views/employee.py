@@ -3,6 +3,7 @@ from apps.analytic.services import KPIService
 from apps.analytic.query import employee_kpi_data
 from apps.formulas.formula_cache import RedisFormulaCache
 from apps.formulas.services import ChannelSocialAccountScoreService
+from apps.analytic.serializers import EmployeeStatsSerializer
 
 
 class EmployeeKPIView(views.APIView):
@@ -32,4 +33,5 @@ class EmployeeKPIView(views.APIView):
         formula_service = ChannelSocialAccountScoreService(cache=kpi_cache)
         service = KPIService(data, formula_service)
         result = service.evaluate()
-        return response.Response(data=result, status=status.HTTP_200_OK)
+        serializers = EmployeeStatsSerializer(result, many=True)
+        return response.Response(data=serializers.data, status=status.HTTP_200_OK)

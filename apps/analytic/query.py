@@ -1,9 +1,16 @@
-from django.db.models import Sum, Case, When, IntegerField, Value, Q
+from django.db.models import Sum, Case, When, IntegerField, Value, Q, F
 from .models import ChannelSocialStats
 from collections import defaultdict
 import datetime
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.db.models.functions import Coalesce
+
+
+from django.db.models import Sum, Q, IntegerField, Value
+from collections import defaultdict
+from django.conf import settings
+import datetime
 
 
 def employee_kpi_data(request, year=None, month=None):
@@ -19,92 +26,61 @@ def employee_kpi_data(request, year=None, month=None):
 
     stats = (
         ChannelSocialStats.objects.filter(
-            Q(year=this_year, month=this_month) | Q(year=prev_year, month=prev_month)
+            Q(year=this_year, month=this_month) |
+            Q(year=prev_year, month=prev_month)
         )
         .values(
             "smm_staff__employee_id",
-            "smm_staff__employee__full_name",  # faqat full_name ishlatamiz
+            "smm_staff__employee__full_name",
             "smm_staff__employee__avatar",
             "channel_social_account_id",
             "channel_social_account__channel__name",
             "channel_social_account__social_network__name",
         )
         .annotate(
-            this_views=Sum(
-                Case(
-                    When(year=this_year, month=this_month, then="views"),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            ),
-            prev_views=Sum(
-                Case(
-                    When(year=prev_year, month=prev_month, then="views"),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            ),
-            this_followers=Sum(
-                Case(
-                    When(year=this_year, month=this_month, then="followers"),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            ),
-            prev_followers=Sum(
-                Case(
-                    When(year=prev_year, month=prev_month, then="followers"),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            ),
-            content=Sum(
-                Case(
-                    When(year=this_year, month=this_month, then="content_count"),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            ),
+            this_views=Sum("views", filter=Q(year=this_year, month=this_month)),
+            prev_views=Sum("views", filter=Q(year=prev_year, month=prev_month)),
+
+            this_followers=Sum("followers", filter=Q(year=this_year, month=this_month)),
+            prev_followers=Sum("followers", filter=Q(year=prev_year, month=prev_month)),
+
+            content=Sum("content_count", filter=Q(year=this_year, month=this_month)),
         )
     )
 
-    employees_data = defaultdict(lambda: {"employee": None, "accounts": []})
+    employees_data = {}
 
     for row in stats:
         emp_id = row["smm_staff__employee_id"]
 
-        # Endi faqat full_name
-        employees_data[emp_id]["employee"] = row["smm_staff__employee__full_name"]
-        
-        avatar_path = row["smm_staff__employee__avatar"]
-        if avatar_path:
-            employees_data[emp_id]["avatar"] = request.build_absolute_uri(settings.MEDIA_URL + avatar_path)
+        emp_data = employees_data.setdefault(emp_id, {
+            "employee_id": emp_id,
+            "employee": row["smm_staff__employee__full_name"],
+            "avatar": None,
+            "accounts": []
+        })
 
-        employees_data[emp_id]["accounts"].append({
+        avatar_path = row["smm_staff__employee__avatar"]
+        if avatar_path and not emp_data["avatar"]:  # birinchi marta qo‘shamiz
+            emp_data["avatar"] = request.build_absolute_uri(settings.MEDIA_URL + avatar_path)
+
+        emp_data["accounts"].append({
             "id": row["channel_social_account_id"],
             "channel": row["channel_social_account__channel__name"],
             "social_network": row["channel_social_account__social_network__name"],
             "current": {
-                "views": row["this_views"],
-                "followers": row["this_followers"],
-                "content": row["content"],
+                "views": row["this_views"] or 0,
+                "followers": row["this_followers"] or 0,
+                "content": row["content"] or 0,
             },
             "prev": {
-                "views": row["prev_views"],
-                "followers": row["prev_followers"],
+                "views": row["prev_views"] or 0,
+                "followers": row["prev_followers"] or 0,
             },
         })
 
+    return list(employees_data.values())
 
-    return [
-        {
-            "employee_id": emp_id,
-            "employee": data["employee"],
-            "avatar": data.get("avatar"),
-            "accounts": data["accounts"],
-        }
-        for emp_id, data in employees_data.items()
-    ]
 
 
 def get_channel_last_one_year(channel_id):
@@ -198,3 +174,83 @@ def channel_stats_by_social_network(channel_id: int):
     )
 
     return stats
+
+
+def get_channel_social_stats(request, channel_id: int):
+    today = datetime.date.today()
+    this_year, this_month = today.year, today.month
+
+    # Oldingi oy (year, month ni hisoblab chiqamiz)
+    if this_month == 1:
+        prev_year = this_year - 1
+        prev_month = 12
+    else:
+        prev_year = this_year
+        prev_month = this_month - 1
+
+    qs = (
+        ChannelSocialStats.objects.filter(channel_social_account__channel_id=channel_id)
+        .values(
+            "smm_staff__channel_social_account__social_network__name",
+            "smm_staff__channel_social_account__social_network__icon",
+        )
+        .annotate(
+            # Jami (total)
+            total_views=Coalesce(Sum("views"), Value(0, output_field=IntegerField())),
+            total_followers=Coalesce(Sum("followers"), Value(0, output_field=IntegerField())),
+            total_content=Coalesce(Sum("content_count"), Value(0, output_field=IntegerField())),
+
+            # O‘tgan oy
+            prev_views=Coalesce(
+                Sum("views", filter=Q(year=prev_year, month=prev_month)),
+                Value(0, output_field=IntegerField())
+            ),
+            prev_followers=Coalesce(
+                Sum("followers", filter=Q(year=prev_year, month=prev_month)),
+                Value(0, output_field=IntegerField())
+            ),
+            prev_content=Coalesce(
+                Sum("content_count", filter=Q(year=prev_year, month=prev_month)),
+                Value(0, output_field=IntegerField())
+            ),
+
+            # Hozirgi oy
+            curr_views=Coalesce(
+                Sum("views", filter=Q(year=this_year, month=this_month)),
+                Value(0, output_field=IntegerField())
+            ),
+            curr_followers=Coalesce(
+                Sum("followers", filter=Q(year=this_year, month=this_month)),
+                Value(0, output_field=IntegerField())
+            ),
+            curr_content=Coalesce(
+                Sum("content_count", filter=Q(year=this_year, month=this_month)),
+                Value(0, output_field=IntegerField())
+            ),
+        )
+        .annotate(
+            social_network=F("channel_social_account__social_network__name"),
+            icon_path=F("channel_social_account__social_network__icon"),
+            diff_views=F("curr_views") - F("prev_views"),
+            diff_followers=F("curr_followers") - F("prev_followers"),
+            diff_content=F("curr_content") - F("prev_content"),
+        )
+        .values(
+            "social_network",
+            "icon_path",
+            "diff_views", "diff_followers", "diff_content",
+            "total_views", "total_followers", "total_content",
+        )
+    )
+
+    # Icon’ni to‘liq media yo‘l bilan qaytarish
+    result = []
+    for row in qs:
+        icon = row["icon_path"]
+        if icon:
+            row["icon_path"] = (
+                request.build_absolute_uri(settings.MEDIA_URL + str(row["icon_path"]))
+            )
+        result.append(row)
+
+    return result

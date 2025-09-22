@@ -5,6 +5,13 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf import settings
 from django.conf.urls.static import static
+from django.conf.urls import handler400, handler403, handler404, handler500
+from django.http import JsonResponse
+
+def custom_bad_request(request, exception=None):
+    return JsonResponse({"error": "Bad Request"}, status=400)
+
+handler400 = custom_bad_request
 
 schema_view = get_schema_view(
    openapi.Info(

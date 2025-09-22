@@ -6,52 +6,53 @@ class KPIService:
     def __init__(self, data, service: ChannelSocialAccountScoreService):
         self.data = data
         self.service = service
-
-    @staticmethod
-    def get_points(value, rules):
-        for rule in rules:
-            if value >= rule["min_value"]:
-                return rule["points"]
-        return 0
-
-    @staticmethod
-    def calc_percentage(prev, current):
-        if prev == 0:
-            return 100 if current > 0 else 0
-        return ((current - prev) / prev) * 100
     
     @staticmethod
-    def calc_percentage2(prev, current):
+    def calc_percentage(prev, current):
         if prev == 0:
             return 100 if current > 0 else 0
         return (current / prev) * 100
     
     def evaluate(self):
         employees = []
+
         for emp in self.data:
             total_score = 0
-            employee_result = {"employee": emp["employee"], "avatar": emp['avatar'], "data": [], 'total_score': 0, 'kpi': 0}
+            accounts_data = []
+
             for account in emp["accounts"]:
-                score_sum = 0
-                current = account["current"]
-                prev = account["prev"]
+                current, prev = account["current"], account["prev"]
 
-                view_percentage = self.calc_percentage2(prev["views"], current["views"])
-                follower_percentage = self.calc_percentage2(prev["followers"], current["followers"])
-                values = [view_percentage, follower_percentage, current['content']]
+                # foizlar
+                view_percentage = self.calc_percentage(prev["views"], current["views"])
+                follower_percentage = self.calc_percentage(prev["followers"], current["followers"])
+                
+                # hisoblanadigan qiymatlar
+                values = {
+                    "views": view_percentage,
+                    "followers": follower_percentage,
+                    "content": current["content"]
+                }
 
-                score_sum = self.service.score_sum(account_id=account['id'], values=values)
+                score_sum = self.service.score_sum(account_id=account["id"], values=values)
                 total_score += score_sum
-                employee_result["data"].append({
-                    "channel": account['channel'],
+
+                accounts_data.append({
+                    "channel": account["channel"],
                     "social_network": account["social_network"],
                     "score": score_sum
                 })
-            kpi_result = kpi_percent(total_score)
-            employee_result['total_score'] = total_score
-            employee_result["kpi"] = kpi_result
-            employees.append(employee_result)
+
+            employees.append({
+                "employee": emp["employee"],
+                "avatar": emp["avatar"],
+                "data": accounts_data,
+                "total_score": total_score,
+                "kpi": kpi_percent(total_score)
+            })
+
         return employees
+
 
 
     # def evaluate(self):

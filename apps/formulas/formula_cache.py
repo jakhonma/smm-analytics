@@ -44,7 +44,7 @@ class RedisFormulaCache:
 
     def get_data(self, account_id: int) -> dict:
         """
-        Muayyan channel account uchun KPI ma'lumotlarini olish.
+        Muayyan channel account uchun Formula ma'lumotlarini olish.
         Agar cache bo‘sh bo‘lsa, bazadan olib qayta saqlaydi.
         """
         key = f"{KPI_CACHE_KEY}:{account_id}"

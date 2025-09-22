@@ -1,2 +1,2 @@
 from .channel import ChannelSocialAccountStatsSerializer, ChannelWithStatsSerializer
-from .employee_kpi import EmployeeKPISerializer
+from .employee_kpi import EmployeeStatsSerializer

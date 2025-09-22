@@ -1,7 +1,7 @@
 from rest_framework import generics, views
 from .models import Channel
 from .serializers.channel import ChannelSerializer
-from apps.employee.serializers import SmmStaffSerializer, SmmStaffEmployeesSerializer
+from apps.employee.serializers import SmmStaffEmployeesSerializer
 from apps.employee.models import SMMStaff
 
 
