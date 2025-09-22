@@ -4,8 +4,7 @@ from django.db.models.functions import Coalesce
 from apps.channel.models import Channel, ChannelSocialAccount
 from apps.analytic.models import ChannelSocialStats
 from apps.analytic.serializers import ChannelWithStatsSerializer
-from apps.analytic.query import get_channel_last_one_year
-from apps.channel.serializers.channel import ChannelSerializer
+from apps.analytic.query import get_channel_last_one_year, channel_stats_by_social_network
 
 
 class ChannelWithStatsView(generics.RetrieveAPIView):
@@ -58,5 +57,19 @@ class ChannelYearlyStatsAPIView(views.APIView):
         try:
             data = get_channel_last_one_year(channel_id)
             return response.Response({"channel_id": channel_id, "stats": data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return response.Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChannelStatsBySocialNetworkAPIView(views.APIView):
+    """
+    Kanalning ijtimoiy tarmoqlar bo‘yicha statistikasi
+    """
+    lookup_field = "channel_id"
+
+    def get(self, request, channel_id):
+        try:
+            data = channel_stats_by_social_network(channel_id=channel_id)
+            return response.Response({"stats": data}, status=status.HTTP_200_OK)
         except Exception as e:
             return response.Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

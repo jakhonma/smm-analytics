@@ -1,4 +1,4 @@
-from ..formulas.services import ChannelSocialAccountScoreService
+from apps.formulas.services import ChannelSocialAccountScoreService
 from .kpi_percent import kpi_percent
 
 
@@ -30,7 +30,7 @@ class KPIService:
         employees = []
         for emp in self.data:
             total_score = 0
-            employee_result = {"employee": emp["employee"], "data": [], 'total_score': 0, 'kpi': 0}
+            employee_result = {"employee": emp["employee"], "avatar": emp['avatar'], "data": [], 'total_score': 0, 'kpi': 0}
             for account in emp["accounts"]:
                 score_sum = 0
                 current = account["current"]

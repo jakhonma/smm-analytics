@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import ChannelWithStatsView, EmployeeKPIView, ChannelYearlyStatsAPIView
+from . import views
 
 urlpatterns = [
-    path('channel/<str:name>/', ChannelWithStatsView.as_view(), name='channel-stats'),
-    path('employee-kpi/', EmployeeKPIView.as_view(), name="employye-kpi"),
-    path("channels/<int:channel_id>/yearly-stats/", ChannelYearlyStatsAPIView.as_view(), name="channel-yearly-stats"),
+    path('channel/<str:name>/', views.ChannelWithStatsView.as_view(), name='channel-stats'),
+    path('employee-kpi/', views.EmployeeKPIView.as_view(), name="employye-kpi"),
+    path("<int:channel_id>/yearly-stats/", views.ChannelYearlyStatsAPIView.as_view(), name="channel-yearly-stats"),
+    path("<int:channel_id>/stats-by-social-network/", views.ChannelStatsBySocialNetworkAPIView.as_view(), name="channel-stats-by-social-network"),
 ]

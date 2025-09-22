@@ -1,2 +1,2 @@
-from .channel import ChannelWithStatsView, ChannelYearlyStatsAPIView
+from .channel import ChannelWithStatsView, ChannelYearlyStatsAPIView, ChannelStatsBySocialNetworkAPIView
 from .employee import EmployeeKPIView
