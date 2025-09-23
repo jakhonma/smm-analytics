@@ -83,7 +83,7 @@ def employee_kpi_data(request, year=None, month=None):
 
 
 
-def get_channel_last_one_year(channel_id):
+def get_channel_last_one_year(request, channel_id):
     today = datetime.date.today()
     start_date = today - relativedelta(months=11)  # 12 oy oldin (hozirgi oyni ham qo‘shib)
     
@@ -121,7 +121,7 @@ def get_channel_last_one_year(channel_id):
         month_label = f"{row['year']}-{row['month']:02d}"
         sn = row["smm_staff__channel_social_account__social_network__name"]
         full_name = row['smm_staff__employee__full_name']
-        avatar = row['smm_staff__employee__avatar']
+        avatar = request.build_absolute_uri(settings.MEDIA_URL + str(row['smm_staff__employee__avatar'])) if row['smm_staff__employee__avatar'] else None
         
         if full_name not in employees:
             employees[full_name] = {
@@ -175,8 +175,8 @@ def channel_stats_by_social_network(channel_id: int):
 
     return stats
 
-
-def get_channel_social_stats(request, channel_id: int):
+#HAR BIR KANAL UCHUN UMUMIY STATISTIKA VA OYLIK O`ZGARISHLAR
+def get_channel_social_stats(request, channel_name: str):
     today = datetime.date.today()
     this_year, this_month = today.year, today.month
 
@@ -189,7 +189,7 @@ def get_channel_social_stats(request, channel_id: int):
         prev_month = this_month - 1
 
     qs = (
-        ChannelSocialStats.objects.filter(channel_social_account__channel_id=channel_id)
+        ChannelSocialStats.objects.filter(channel_social_account__channel__name=channel_name)
         .values(
             "smm_staff__channel_social_account__social_network__name",
             "smm_staff__channel_social_account__social_network__icon",

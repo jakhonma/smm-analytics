@@ -16,6 +16,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'import_export',
+    "rangefilter",  # django-admin-rangefilter
+    "django_admin_listfilter_dropdown",  # dropdown filter
 ]
 
 INSTALLED_APPS += [
