@@ -155,7 +155,7 @@ class ChannelWithStatsView(generics.RetrieveAPIView):
                 output_field=IntegerField(),
             ),
         )
-
+        
         return Channel.objects.prefetch_related(
             Prefetch("social_accounts", queryset=annotated_accounts)
         )

@@ -82,7 +82,7 @@ def employee_kpi_data(request, year=None, month=None):
     return list(employees_data.values())
 
 
-
+#KANAL UCHUN SO‘NGGI 1 YILLIK STATISTIKA (OYMA-OY)
 def get_channel_last_one_year(request, channel_id):
     today = datetime.date.today()
     start_date = today - relativedelta(months=11)  # 12 oy oldin (hozirgi oyni ham qo‘shib)
@@ -240,7 +240,7 @@ def get_channel_social_stats(request, channel_name: str):
             "icon_path",
             "diff_views", "diff_followers", "diff_content",
             "total_views", "total_followers", "total_content",
-        )
+        ).order_by("social_network")[:4]
     )
 
     # Icon’ni to‘liq media yo‘l bilan qaytarish
