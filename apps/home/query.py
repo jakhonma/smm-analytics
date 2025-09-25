@@ -1,6 +1,6 @@
 import datetime
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Value, Case, When, FloatField, F, ExpressionWrapper
 from apps.analytic.models import ChannelSocialStats
 from django.db.models.functions import Coalesce
 
@@ -74,26 +74,74 @@ def get_social_networks_present_in_stats():
     )
 
     result = {
-        "views": {"views_sum": 0},
-        "followers": {"followers_sum": 0},
-        "content": {"content_sum": 0},
+        "views": {"sum": 0},
+        "followers": {"sum": 0},
+        "content": {"sum": 0},
     }
 
     for item in stats:
-        print(item)
-        name = item["channel_social_account__social_network__name"].lower()
+        name = str(item["channel_social_account__social_network__name"]).title().replace(" ", "").lower()
 
         # views
-        result["views"]["views_sum"] += item["total_views"]
-        result["views"][f"{name}_views"] = item["total_views"]
+        result["views"]["sum"] += item["total_views"]
+        result["views"][name] = item["total_views"]
 
         # followers
-        result["followers"]["followers_sum"] += item["total_followers"]
-        result["followers"][f"{name}_followers"] = item["total_followers"]
+        result["followers"]["sum"] += item["total_followers"]
+        result["followers"][name] = item["total_followers"]
 
         # content
-        result["content"]["content_sum"] += item["total_content"]
-        result["content"][f"{name}_content"] = item["total_content"]
-
+        result["content"]["sum"] += item["total_content"]
+        result["content"][name] = item["total_content"]
     return result
 
+
+#TOP 5 KANAL UCHUN QUERY
+def get_top_channels():
+    base_stats = (
+        ChannelSocialStats.objects
+        .values(
+            "channel_social_account__channel__name",
+            "smm_staff__employee__full_name",
+            "smm_staff__employee__avatar",
+        )
+        .annotate(
+            views_sum=Coalesce(Sum("views"), 0),
+            followers_sum=Coalesce(Sum("followers"), 0),
+            content_sum=Coalesce(Sum("content_count"), 0),
+        )
+        .annotate(
+            engagement=Case(
+                When(followers_sum__gt=0, then=F("views_sum") * 1.0 / F("followers_sum")),
+                default=Value(0.0),
+                output_field=FloatField(),
+            ),
+            efficiency=Case(
+                When(content_sum__gt=0, then=F("views_sum") * 1.0 / F("content_sum")),
+                default=Value(0.0),
+                output_field=FloatField(),
+            ),
+        )
+        .annotate(
+            raw_score=ExpressionWrapper(
+                (F("engagement") * 0.5) + (F("efficiency") * 0.5),
+                output_field=FloatField(),
+            )
+        )
+    )
+
+    # 2. Umumiy yig‘indi hisoblash
+    total_score = base_stats.aggregate(total=Sum("raw_score"))["total"] or 1
+
+    # 3. Foizga o‘tkazish
+    stats = (
+        base_stats
+        .annotate(
+            final_score=ExpressionWrapper(
+                (F("raw_score") / total_score) * 100,
+                output_field=FloatField(),
+            )
+        )
+        .order_by("-final_score")
+    )
+    return stats

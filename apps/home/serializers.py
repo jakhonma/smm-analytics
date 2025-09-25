@@ -30,3 +30,34 @@ class ChaertStatsSerializer(serializers.Serializer):
     views = ChartRowSerializer(many=True)
     followers = ChartRowSerializer(many=True)
     content = ChartRowSerializer(many=True)
+
+
+#SOCIAL NETWORKLAR BO'YICHA FOIZ KO'RSATKICHLARINI HISOBLASH UCHUN QUERY
+class StatsSerializer(serializers.Serializer):
+    sum = serializers.IntegerField()
+    instagram = serializers.IntegerField(default=0)
+    facebook = serializers.IntegerField(default=0)
+    youTube = serializers.IntegerField(default=0)
+    telegram = serializers.IntegerField(default=0)
+
+
+class SocialStatsSerializer(serializers.Serializer):
+    views = StatsSerializer()
+    followers = StatsSerializer()
+    content = StatsSerializer()
+
+
+#TOP 5 KANAL UCHUN SERIALIZER
+class TopFiveChannelStatsSerializer(serializers.Serializer):
+    channel_name = serializers.CharField(source="channel_social_account__channel__name")
+    employee = serializers.CharField(source="smm_staff__employee__full_name")
+    avatar = serializers.SerializerMethodField()
+    final_score = serializers.FloatField()
+
+    def get_avatar(self, obj):
+        request = self.context.get("request")
+        avatar_path = obj.get("smm_staff__employee__avatar")  # .values() dan keladigan string
+        if avatar_path:
+            return request.build_absolute_uri(f"{settings.MEDIA_URL}{avatar_path}")
+        return None
+

@@ -1,11 +1,11 @@
 from rest_framework import generics, response
 from apps.analytic.models import ChannelSocialStats
 from django.db.models import Sum, F
-from .serializers import MainStatsSerializer, ChaertStatsSerializer
-from .query import get_stats_by_network, get_social_networks_present_in_stats
+from .serializers import MainStatsSerializer, ChaertStatsSerializer, SocialStatsSerializer, TopFiveChannelStatsSerializer
+from .query import get_stats_by_network, get_social_networks_present_in_stats, get_top_channels
 
 
-
+#ASOSIY SOCIAL NETWORKLAR BO'YICHA UMUMIY KO'RSATKICHLAR
 class MainStatsView(generics.ListAPIView):
     serializer_class = MainStatsSerializer
 
@@ -26,13 +26,30 @@ class MainStatsView(generics.ListAPIView):
         )
 
 
+#ASOSIY UCHUN 12 OYLIK CHART UCHUN
 class ChartStatsView(generics.GenericAPIView):
     serializer_class = ChaertStatsSerializer
 
     def get(self, request, *args, **kwargs):
-        get_social_networks_present_in_stats()
-
         data = get_stats_by_network()
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
+        return response.Response(serializer.data)
+
+
+#ASOSIY UCHUN SOCIAL NETWORKLARNI FOIYZ KO'RSATKICHLARI HISOBLASH UCHUN
+class MainSocialStatsView(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        data = get_social_networks_present_in_stats()
+        serializer = SocialStatsSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return response.Response(serializer.data)
+
+
+#TOP 5 KANAL UCHUN
+class TopFiveChannelStatsView(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        stats = get_top_channels()[:5]
+        serializer = TopFiveChannelStatsSerializer(stats, many=True, context={'request': request})
         return response.Response(serializer.data)
