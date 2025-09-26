@@ -1,8 +1,9 @@
 import datetime
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, Q, Value, Case, When, FloatField, F, ExpressionWrapper
+from django.db.models import Sum, Q, Value, Case, When, FloatField, F, ExpressionWrapper, Count, Window
 from apps.analytic.models import ChannelSocialStats
 from django.db.models.functions import Coalesce
+from apps.channel.models import ChannelSocialAccount
 
 
 #12 OYLIK CHARTLARGA UCHUN VIEWS, FOLLOWERS, CONTENT MA'LUMOT OLISH QUERY
@@ -141,6 +142,73 @@ def get_top_channels():
                 (F("raw_score") / total_score) * 100,
                 output_field=FloatField(),
             )
+        )
+        .order_by("-final_score")
+    )
+    return stats
+
+
+#ASOSIY UCHUN UMUMIY STATISTIKA
+def get_general_stats():
+    stats = ChannelSocialAccount.objects.aggregate(
+        total_channels=Count("channel", distinct=True),
+        total_social_accounts=Count("id", distinct=True),
+        total_followers=Coalesce(Sum("staff__monthly_stats__followers"), 0),
+        total_views=Coalesce(Sum("staff__monthly_stats__views"), 0),
+        total_content=Coalesce(Sum("staff__monthly_stats__content_count"), 0),
+    )
+    return stats
+
+
+# IJTIMOIY TARMOQLARNI UMUMIY REYTINGINI HISOBLASH
+def get_social_network_ranking():
+    base_stats = (
+        ChannelSocialStats.objects
+        .values(
+            "channel_social_account__social_network__name",
+            "channel_social_account__social_network__icon",  # agar icon ham kerak bo‘lsa
+        )
+        .annotate(
+            views_sum=Coalesce(Sum("views"), 0),
+            followers_sum=Coalesce(Sum("followers"), 0),
+            content_sum=Coalesce(Sum("content_count"), 0),
+        )
+        .annotate(
+            engagement=Case(
+                When(followers_sum__gt=0, then=F("views_sum") * 1.0 / F("followers_sum")),
+                default=Value(0.0),
+                output_field=FloatField(),
+            ),
+            efficiency=Case(
+                When(content_sum__gt=0, then=F("views_sum") * 1.0 / F("content_sum")),
+                default=Value(0.0),
+                output_field=FloatField(),
+            ),
+        )
+        .annotate(
+            raw_score=ExpressionWrapper(
+                (F("engagement") * 0.5) + (F("efficiency") * 0.5),
+                output_field=FloatField(),
+            )
+        )
+    )
+
+    # 2. Umumiy yig‘indi hisoblash
+    total_score = base_stats.aggregate(total=Sum("raw_score"))["total"] or 1
+
+    # 3. Foizga o‘tkazish
+    stats = (
+        base_stats
+        .annotate(
+            final_score=ExpressionWrapper(
+                (F("raw_score") / total_score) * 100,
+                output_field=FloatField(),
+            )
+        )
+        .values(  # faqat kerakli maydonlarni chiqar
+            "channel_social_account__social_network__name",
+            "channel_social_account__social_network__icon",
+            "final_score"
         )
         .order_by("-final_score")
     )

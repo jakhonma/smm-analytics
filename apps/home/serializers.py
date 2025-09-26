@@ -61,3 +61,17 @@ class TopFiveChannelStatsSerializer(serializers.Serializer):
             return request.build_absolute_uri(f"{settings.MEDIA_URL}{avatar_path}")
         return None
 
+
+#SOCIAL NETWORK RANKING UCHUN SERIALIZER
+class SocialNetworkRankingSerializer(serializers.Serializer):
+    name = serializers.CharField(source="channel_social_account__social_network__name")
+    icon_path = serializers.SerializerMethodField()
+    final_score = serializers.FloatField()
+
+    def get_icon_path(self, obj):
+        request = self.context.get("request")
+        icon_path = obj.get("channel_social_account__social_network__icon")
+
+        if icon_path and request:
+            return request.build_absolute_uri(settings.MEDIA_URL + str(icon_path))
+        return icon_path

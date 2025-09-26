@@ -1,8 +1,8 @@
 from rest_framework import generics, response
 from apps.analytic.models import ChannelSocialStats
 from django.db.models import Sum, F
-from .serializers import MainStatsSerializer, ChaertStatsSerializer, SocialStatsSerializer, TopFiveChannelStatsSerializer
-from .query import get_stats_by_network, get_social_networks_present_in_stats, get_top_channels
+from .serializers import MainStatsSerializer, ChaertStatsSerializer, SocialStatsSerializer, TopFiveChannelStatsSerializer, SocialNetworkRankingSerializer
+from .query import get_stats_by_network, get_social_networks_present_in_stats, get_top_channels, get_general_stats, get_social_network_ranking
 
 
 #ASOSIY SOCIAL NETWORKLAR BO'YICHA UMUMIY KO'RSATKICHLAR
@@ -52,4 +52,21 @@ class TopFiveChannelStatsView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         stats = get_top_channels()[:5]
         serializer = TopFiveChannelStatsSerializer(stats, many=True, context={'request': request})
+        return response.Response(serializer.data)
+
+
+#ASOSIY UCHUN UMUMIY STATISTIKA
+class GeneralStatsView(generics.GenericAPIView):
+
+    def get(self, request, *args, **kwargs):
+        data = get_general_stats()
+        return response.Response(data)
+
+
+class SocialNetworkRankingView(generics.GenericAPIView):
+
+    def get(self, request, *args, **kwargs):
+        data = get_social_network_ranking()
+        serializer = SocialNetworkRankingSerializer(data, many=True, context={'request': request})
+        # serializer.is_valid(raise_exception=True)
         return response.Response(serializer.data)
