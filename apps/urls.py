@@ -5,4 +5,5 @@ urlpatterns = [
     path('home/', include('apps.home.urls')),
     path('channel/', include('apps.channel.urls')),
     path('analytic/', include('apps.analytic.urls')),
+    path('report/', include('apps.report.urls')),
 ]

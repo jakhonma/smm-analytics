@@ -13,7 +13,7 @@ class Channel(BaseModel):
     """Asosiy kanal (mahalla, telekanal)"""
     # logo = models.ImageField(upload_to='channel_logos/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
-    # created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['order']
